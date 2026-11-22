@@ -4821,6 +4821,14 @@ html.hz-m .hz-toc{font-size:34px;padding:14px 28px;bottom:40px}
 .hz-sheet.dk.ls,.hz-sheet.dk.ls.side-l{border-top-color:#D2B06A}
 .hz-sheet.ls .hz-grab{display:block}
 
+/* 휴대폰 ‹ › 넘김 단추 */
+.hz-nav{display:none}
+html.hz-m .hz-nav{display:flex;align-items:center;justify-content:center;position:fixed;top:50%;z-index:9000;width:42px;height:64px;margin-top:-32px;
+  border:none;border-radius:12px;background:rgba(28,34,48,.38);color:#fff;font-size:34px;line-height:1;padding:0 0 4px;-webkit-tap-highlight-color:transparent}
+html.hz-m .hz-nav:active{background:rgba(168,56,43,.7)}
+html.hz-m .hz-prev{left:4px} html.hz-m .hz-next{right:4px}
+html.hz-m:not(.deck-stage) .hz-nav{display:none}
+
 </style>
 </head>
 <body>
@@ -5362,6 +5370,11 @@ function onClickCapture(e) {
     return;
   }
   var t = tgt(e.target), s = t && t.closest('.slide');
+  if (HZM && (!t || !s || !s._hzReady)) { // 휴대폰: 빈 곳을 눌러도 장이 넘어가지 않게 (넘김은 ‹ › 단추로)
+    var el1 = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+    if (!(el1 && el1.closest('a,button,.hz-nav'))) stop();
+    return;
+  }
   if (!t || !s || !s._hzReady) return;
   stop();
   var nav = t.getAttribute('data-nav');
@@ -8119,6 +8132,20 @@ function init() {
     document.querySelectorAll('.slide:not([data-hz-tone="dark"]) .hz-w').forEach(function (w) { if (darkBg(w)) w.classList.add('hz-ondark'); });
   }, 50);
   if (HZM) document.documentElement.classList.add('hz-m');
+  if (HZM) {
+    // 두 손가락 확대·축소나 확대한 화면을 끌 때 장이 넘어가지 않도록, 밀어서 넘기기를 끈다
+    window.addEventListener('touchend', function (e) {
+      var el2 = e.target.nodeType === 1 ? e.target : e.target.parentElement;
+      if (!(el2 && el2.closest('.hz-sheet,.hz-nav'))) e.stopPropagation();
+    }, true);
+    // ‹ › 넘김 단추
+    var key = function (k) { window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); };
+    [['prev', '‹', 'ArrowLeft', '이전 장'], ['next', '›', 'ArrowRight', '다음 장']].forEach(function (b) {
+      var btn = document.createElement('button'); btn.className = 'hz-nav hz-' + b[0]; btn.textContent = b[1]; btn.setAttribute('aria-label', b[3]);
+      btn.addEventListener('click', function (e) { e.stopPropagation(); e.preventDefault(); mCloseAll(); key(b[2]); });
+      document.body.appendChild(btn);
+    });
+  }
   if (HZM) { // 세로(목록) 보기에서 화면을 크게 스크롤하면 열린 카드를 닫는다
     var y0 = null;
     window.addEventListener('scroll', function () {
